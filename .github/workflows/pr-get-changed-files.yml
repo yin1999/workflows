@@ -1,0 +1,45 @@
+name: Get changed files
+
+on:
+  workflow_call:
+    inputs:
+      paths:
+        description: Regex of paths to filter on, e.g. '.*\.md'.
+        required: false
+        default: ''
+        type: string
+    secrets:
+      GH_TOKEN:
+        description: Personal access token passed from the caller workflow.
+        required: true
+    outputs:
+      files:
+        description: The list of changed files, separated by newlines.
+        value: ${{ jobs.get-changed-files.outputs.files }}
+
+jobs:
+  get-changed-files:
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.get-changed-files.outputs.files }}
+    steps:
+      - id: get-changed-files
+        run: |
+          FILES=$(gh api repos/{owner}/{repo}/compare/${{ env.BASE_SHA }}...${{ env.HEAD_SHA }} \
+            --jq '.files | .[] | select(.status|IN("added", "modified", "renamed", "copied", "changed")) | .filename')
+
+          if [[ -n "${{ inputs.paths }}" ]]; then
+            FILES=$(echo "${FILES}" | egrep -i "${{ inputs.paths }}")
+          fi
+
+          # set multiline output
+          # see https://github.com/orgs/community/discussions/26288
+          FILES="${FILES//'%'/'%25'}"
+          FILES="${FILES//$'\n'/'%0A'}"
+          FILES="${FILES//$'\r'/'%0D'}"
+
+          echo "files=${FILES}" >> $GITHUB_OUTPUT
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

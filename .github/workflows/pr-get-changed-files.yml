@@ -33,12 +33,11 @@ jobs:
           fi
 
           # set multiline output
-          # see https://github.com/orgs/community/discussions/26288
-          FILES="${FILES//'%'/'%25'}"
-          FILES="${FILES//$'\n'/'%0A'}"
-          FILES="${FILES//$'\r'/'%0D'}"
-
-          echo "files=${FILES}" >> $GITHUB_OUTPUT
+          # see https://github.com/orgs/community/discussions/26288#discussioncomment-3876281
+          delimiter="$(openssl rand -hex 8)"
+          echo "files<<${delimiter}" >> "${GITHUB_OUTPUT}"
+          echo "${FILES}" >> "${GITHUB_OUTPUT}"
+          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
